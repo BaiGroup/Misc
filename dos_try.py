@@ -23,11 +23,13 @@ m = 16.04*(1e-3)/scipy.constants.Avogadro # mass of one methane molecule
 N = 10 # number of particles in the system
 vol = 4.00440*3.97980*4.01490*(1e-27) # volume of the system
 den = m*N/vol # density of the system
-print(den) 
+#print(den)
+#-----------------------------------------------------------
+
 # reading file
 
 data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17)
-#data = np.loadtxt('data file',skiprows = 6)
+#-----------------------------------------------------------
 
 # storing time and correlation values to corresponding lists
 
@@ -35,9 +37,11 @@ length = len(data) # calculating length of the data lists
 for i in range(0,length):
 	out_list.append(data[i][1]) # storing auto correlation values
 	t.append(data[i][0]) # storing time
+#-----------------------------------------------------------
 
 """
-# performing discrete fourier cosine transform on auto correlation values 
+# performing discrete fourier cosine transform on auto correlation values (1)
+
 for i in range(length):
     for j in range(length):
         angle = 2*np.pi*float(i*j/length)
@@ -45,10 +49,16 @@ for i in range(length):
     y.append(clc)
     clc = 0
 print(y)
+#-----------------------------------------------------------
 """
-# performing discrete fourier cosine transform on auto correlation values
+
+
+# performing discrete fourier cosine transform on auto correlation values (2)
+
 y = dct(out_list,2)
-#print(y)
+#-----------------------------------------------------------
+
+# calculating total degrees of freedom and self diffusion coefficient of the system
 
 for i in range(len(y)):
     y[i] = (y[i])*4*(5e-15)/(308*scipy.constants.k)
@@ -56,16 +66,18 @@ for i in range(len(y)):
     ff.append(i/((5e-15)*len(y)))
 tdos = integrate.simps(y,ff) # total number of degrees of freedom
 Ds= y[0]*(308*scipy.constants.k)/(12*m*N) # Self diffusion coefficient
-print(Ds)
-print(tdos)
-plt.plot(ff,y)
-#plt.plot(t,out_list)
-plt.show()
+#print(Ds)
+#print(tdos)
+#plt.plot(ff,y) # plotting S(v) vs v
+#plt.show()
+#-----------------------------------------------------------
 
 #calculate solid and gas fraction of dos (here y)
 
 
 """
+# calcultauing parttition function using classical harmonic oscillator
+
 for i in range(1,len(xf)):
 	ff.append((i / (len(xf) * 5)))
 for i in range(len(ff)):
@@ -81,4 +93,5 @@ qhopf1 = - integrate.simps(qho1,ff)
 qhopf2 = - integrate.simps(qho2,ff)
 print(qhopf1)
 print(qhopf2)
+#-----------------------------------------------------------
 """
