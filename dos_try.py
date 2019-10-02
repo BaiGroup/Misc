@@ -65,7 +65,7 @@ for i in range(len(y)):
     y[i] = y[i]*m*(1e6)
     ff.append(i/((5e-15)*len(y)))
 tdos = integrate.simps(y,ff) # total number of degrees of freedom
-Ds= y[0]*(308*scipy.constants.k)/(12*m*N) # Self diffusion coefficient
+Ds = y[0]*(308*scipy.constants.k)/(12*m*N) # Self diffusion coefficient
 #print(Ds)
 #print(tdos)
 #plt.plot(ff,y) # plotting S(v) vs v
