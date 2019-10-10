@@ -17,7 +17,6 @@ kb = scipy.constants.k # Boltzmann Constant k
 Na = scipy.constants.Avogadro # Avogadro's number
 T = 308 # system temperature
 clc = 0
-p = 1
 ff = [] # storing frequency values
 rc = [] # integral for partition function corresponding to classical harmonic oscillator
 rq = [] # integral for partition function corresponding to quantum harmonic oscillator
