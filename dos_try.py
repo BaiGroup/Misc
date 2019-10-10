@@ -44,7 +44,7 @@ ysm1 = [] # modified solid DOS parameter used to calculate differnt properties a
 ysm1.append(0)
 ysm2 = [] # modified solid DOS parameter used to calculate differnt properties assuming quantum harmonic oscillator
 ysm2.append(0)
-ygm = [] # modified gas DOS parameter used to calculate differnt properties
+ygm = [] # modified gas DOS parameter used to calculate different properties
 ygm.append(0)
 
 #--------------------------------------------------------------------------------------------------------------------
