@@ -1,10 +1,18 @@
+"""
+Below is the code for computing thermodynamic parameters of a 2PT system
+Considered 2 systems - system1 with 10 molecules and system2 with 30 molecules
+Both systems at same temperature ie 308K and vol
+Can solve for one system by hashing out the other system (eg solving for system1, hash out every syntax related to system2)
+Initially both are hashed out
+"""
+
 import numpy as np 
 from scipy import integrate
 import scipy.constants
 import cmath
 import math
 import matplotlib.pyplot as plt
-from scipy.fftpack import dct
+from scipy.fftpack import dct, fft
 from sympy import symbols
 from sympy.solvers import solve
 from sympy.plotting import plot as symplot
@@ -24,7 +32,8 @@ y = [] # store DOS overall
 ys = [] # store DOS solid contribution
 yg = [] # store DOS gas contribution
 m = 16.04*(1e-3)/Na # mass of one methane molecule
-N = 10 # number of particles in the system
+# N = 10 # number of particles in system1
+# N = 30 # number of particles in system2
 vol = 4.00440*3.97980*4.01490*(1e-27) # volume of the system
 den = N/vol # particle number density of the system
 beta = 1/(kb*T)
@@ -48,8 +57,11 @@ ygm.append(0)
 
 #--------------------------------------------------------------------------------------------------------------------
 
-# reading file
-data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17)
+# reading files
+# use either of the two based on the system of interest
+
+# data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17) # system1
+# data = np.loadtxt('vac-CH4-308K-30-RUN1-prod1.xvg',skiprows = 17) # system2
 
 #--------------------------------------------------------------------------------------------------------------------
 
@@ -57,12 +69,17 @@ data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17)
 
 length = len(data) # calculating length of the data lists
 for i in range(0,length):
-    out_list.append(data[i][1]) # storing auto correlation values
+    out_list.append(data[i][1]*m*N*(1e6)) # storing mass weighted auto correlation values
     t.append(data[i][0]) # storing time
 #--------------------------------------------------------------------------------------------------------------------
 
+# Normalizing data such that C(0) = 3*N*kb*T
+
+for i in range(length):
+    out_list[i] = (out_list[i]/out_list[0])*3*N*kb*T
+#-------------------------------------------------------------------------------------------------------------------- 
 """
-# performing discrete fourier cosine transform on auto correlation values (1)
+# performing discrete fourier cosine transform on auto correlation values (1)(takes a lot of time to run and is similar to dct in python)
 
 for i in range(length):
     for j in range(length):
@@ -70,29 +87,27 @@ for i in range(length):
         clc = clc + out_list[j]*np.cos(angle)
     y.append(clc)
     clc = 0
-print(y)
+#print(y)
 #--------------------------------------------------------------------------------------------------------------------
 """
 
 
-# performing discrete fourier cosine transform on auto correlation values (2)
+# performing discrete fourier transform on auto correlation values using inbult python functions(2)
 
-y = dct(out_list,2)
+y = fft(out_list)
+# y = dct(out_list,2) # gives twice the expected results, don't know why
 
 #--------------------------------------------------------------------------------------------------------------------
 
-# calculating total degrees of freedom and self diffusion coefficient of the system
+# calculating total degrees of freedom and self diffusion coefficient of the system 
 
 for i in range(len(y)):
-    y[i] = (y[i])*4*(5e-15)*(beta)
-    y[i] = y[i]*m*(1e6)
-    ff.append(i/((5e-15)*len(y)))
-tdos = integrate.simps(y,ff) # total number of degrees of freedom
+    y[i] = (y[i].real*4)*(5e-15)*(beta) # multiplying by the factor (4/kT)*dt
+    ff.append(i/((5e-15)*len(y))) # v (frequency)
+tdos = integrate.simps(y[:(int)((len(y)-1)/2)],ff[:(int)((len(y)-1)/2)]) # total number of degrees of freedom
 dif_sp = y[0]*(T*kb)/(12*m*N) # Self diffusion coefficient (p)
-#print(dif_sp)
-#print(tdos)
-# plt.plot(ff,y) # plotting S(v) vs v
-# plt.show()
+#plt.plot(ff,y) # plotting S(v) vs v
+#plt.show()
 
 #--------------------------------------------------------------------------------------------------------------------
 
@@ -100,34 +115,32 @@ dif_sp = y[0]*(T*kb)/(12*m*N) # Self diffusion coefficient (p)
 # Solid and gas dos vs frequency also calculated here
 
 delta = math.sqrt((np.pi*kb*T)/m)*((6/np.pi)**(2/3))*(den**(1/3))*(2*y[0])/(9*N) # normalized diffusivity constant
-#print(delta)
 
-# Snippet used to iterate packing fraction and fraction of gas
+# Snippet used to calculate packing fraction and fraction of gas (hashed out because takes lot of time to solve)
 """
 f,pf,eq1,eq2 = symbols('f pf eq1 eq2', real = True) # defining symbols => f = fraction of gas , pf = packing fraction
 eq1 = 2*(delta**(-4.5))*(f**7.5)-6*(delta**(-3))*(f**5)-(delta**(-27/4))*(f**(21/4))+6*(delta**(-1.5))*(f**2.5)+2*f-2
 eq2 = 2*(delta**3)*(pf**5)-(pf**(7/3))*(delta**2)-6*(pf**(10/3))*(delta**2)+2*delta*(pf**(2/3))+6*delta*(pf**(5/3))-2
-pf_val = solve(eq2,check = False, quick = True) # solving equation for pf
+pf_val = solve(eq2, check = False, quick = True) # solving equation for pf and gives a list of all possible results to the equation eq2 i.e both real and imaginary roots
 print(pf_val)
-#f_val = solve(eq1,check = False, quick = True) # solving equation for f # takes too long to solve
+#f_val = solve(eq1, check = False, quick = True) # solving equation for f # takes too long to solve
 #print(f_val)
 #symplot(eq1)
-#symplot(eq2)S
+#symplot(eq2)
 """
 
-pf_assval = 5.64288740598082 # packing fraction calculated
+# use either of the two values based on the system of interest
+# pf_assval = 1.78420054189247 # packing fraction calculated from above snippet for system1 (real value from pf_val)
+# pf_assval = 1.92017323858140 # packing fraction calculated from above snippet for system2 (real value from pf_val)
 dia = (pf_assval*6/(np.pi*den))**(1/3) # hard sphere diameter
 frac = delta*pf_assval**(2/3) # fraction of gas
-#print(frac)
-#print(dia)
 dif_hsfp = (kb*T*y[0])/(12*m*N*frac) # diffusivity of the gas component assuming gas as a hard sphere (fp)
-#print(dif_hsfp)
 dif_cep = (3/8)*math.sqrt((kb*T)/(np.pi*m))/(den*dia**2) # hard sphere Chapman Enskog diffusion (p)
-#print(dif_cep)
 dif_cefp = dif_cep/frac # hard sphere Chapman Enskog diffusion (fp)
-#print(dif_cefp)
 
-""" some verification
+"""
+# some verification
+
 c1 = frac*pf_assval
 z = (1 + c1 + c1**2 - c1**3)/(1 - c1)**3 # Carnahan Starling EOS
 coeff = (4*c1)/(z-1)
@@ -135,48 +148,48 @@ k = coeff * dif_cefp/dif_hsfp
 print(k)
 """
 
+# Calculating separate total solid and gas dos
+
 for i in range(len(y)):
-    p = (np.pi*y[0]*ff[i])/(2*frac*12)
+    p = (np.pi*y[0]*ff[i])/(2*frac*tdos)
     yg.append(y[0]/(1+(p**2))) # calculating gas DOS function vs frequency
     ys.append(y[i]-yg[i]) # calculating solid DOS function vs frequency
-tdosg = integrate.simps(yg,ff) # total number of gas DOS
-tdoss = integrate.simps(ys,ff) # total number of solid DOS
-#print(tdosg)
-#print(tdoss)
+tdosg = integrate.simps(yg[:(int)((len(y)-1)/2)],ff[:(int)((len(y)-1)/2)]) # total number of gas DOS
+tdoss = integrate.simps(ys[:(int)((len(y)-1)/2)],ff[:(int)((len(y)-1)/2)]) # total number of solid DOS
 
 #--------------------------------------------------------------------------------------------------------------------
 
 # finding partition function for the system and different thermodynamical properties
 
 # partition function for the solid component
+
 for i in range(1,len(y)):
     rc.append(0 - ys[i]*np.log(beta*h*ff[i]))
-    k = 0 - (beta*h*ff[i])/2 - np.log(1-np.exp(0 - (beta*h*ff[i])/2)) # natural logarithm of quantum harmonic oscillator
+    k = 0 - (beta*h*ff[i])/2 - np.log(1 - np.exp(0 - (beta*h*ff[i]))) # natural logarithm of quantum harmonic oscillator
     rq.append(ys[i]*k)
-lchos = integrate.simps(rc,ff[1:]) # calculating natural logarithm of solid DOS partition function assuming classical harmonic oscillator
-lqhos = integrate.simps(rq,ff[1:]) # calculating natural logarithm of solid DOS partition function assuming quantum harmonic oscillator
+lchos = integrate.simps(rc[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) # calculating natural logarithm of solid DOS partition function assuming classical harmonic oscillator
+lqhos = integrate.simps(rq[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) # calculating natural logarithm of solid DOS partition function assuming quantum harmonic oscillator
 chos = np.exp(lchos) # finding corresponding partition function
 qhos = np.exp(lqhos) # finding corresponding partition function
-# print(chos)
-# print(qhos)
 
 # finding entropy contribution for hard sphere fluid
 
-# Step 1 : find entropy contribution per molecule assuming monatomic ideal gas at same temperature and density (united atom model), per molecule basis 
+# Step 1 : find excess entropy contribution per molecule assuming monatomic ideal gas at same temperature and density (united atom model), per molecule basis 
+
 r = (((2*np.pi*m*kb*T)/(h**2))**(1.5))*(np.exp(2.5))/den
 si = kb*np.log(r) # entropy value per molecule basis
-# print(si)
 
-# Step 2 : use Carnahan Starling equation to calculate the hard sphere entropy, per molecule basis 
+# Step 2 : use Carnahan Starling equation to calculate the hard sphere excess entropy, per molecule basis
+
 c1 = frac*pf_assval
 z = (1 + c1 + c1**2 - c1**3)/(1 - c1)**3 # Carnahan Starling EOS
 r1 = np.log(z)
 r2 = (c1*(3*c1-4))/((1-c1)**2)
 r3 = r1 + r2
 sh = si + kb*r3 # excess entropy value of hard sphere fluid per molecule basis
-# print(sh)
 
-# Calculating helmholtz free energy of the system
+# Calculating Helmholtz free energy of the system
+
 W_Ahs = 0.5 - (sh/(3*kb)) # weighting function for helmholtz free energy corresponding to hard sphere gas
 for i in range(1,len(y)):
     W_Acho.append(np.log(beta*h*ff[i]))
@@ -185,12 +198,11 @@ for i in range(1,len(y)):
     q = (1 - np.exp(0 - beta*h*ff[i]))/np.exp(0 - beta*h*ff[i]/2)
     W_Aqho.append(np.log(q))
     ysm2.append(W_Aqho[i]*ys[i])
-A_cho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ysm1[1:],ff[1:]))*beta**(-1) # helmholtz free energy (assuming classical harmonic oscillator)
-A_qho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ysm2[1:],ff[1:]))*beta**(-1) # helmholtz free energy (assuming quantum harmonic oscillator)
-# print(A_cho)
-# print(A_qho)
+A_cho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ysm1[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*beta**(-1) # Helmholtz free energy (assuming classical harmonic oscillator)
+A_qho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ysm2[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*beta**(-1) # Helmholtz free energy (assuming quantum harmonic oscillator)
 
 # reinitializing different parameters
+
 ysm1 = [] 
 ysm1.append(0)
 ysm2 = [] 
@@ -199,6 +211,7 @@ ygm = []
 ygm.append(0)
 
 # Calculating Entropy of the system
+
 W_Shs = (sh/(3*kb)) # weighting function for entropy corresponding to hard sphere gas
 for i in range(1,len(y)):
     ygm.append(W_Shs*yg[i])
@@ -208,12 +221,11 @@ for i in range(1,len(y)):
     a2 = np.log(1 - np.exp(0 - beta*h*ff[i]))
     W_Sqho.append(a1-a2)
     ysm2.append(W_Sqho[i]*ys[i])
-S_cho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ysm1[1:],ff[1:]))*kb # entropy (assuming classical harmonic oscillator)
-S_qho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ysm2[1:],ff[1:]))*kb # entropy (assuming quantum harmonic oscillator)
-# print(S_cho)
-# print(S_qho)
+S_cho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ysm1[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*kb # Entropy (assuming classical harmonic oscillator)
+S_qho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ysm2[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*kb # Entropy (assuming quantum harmonic oscillator)
 
 # reinitializing different parameters
+
 ysm1 = [] 
 ysm1.append(0)
 ysm2 = [] 
@@ -222,6 +234,7 @@ ygm = []
 ygm.append(0)
 
 # Calculating Energy of the system
+
 W_Ehs = 0.5 # weighting function for energy corresponding to hard sphere gas
 W_Echo = 1 # weighting function for energy corresponding to solid assuming classical harmonic oscillator
 for i in range(1,len(y)):
@@ -230,9 +243,68 @@ for i in range(1,len(y)):
     b2 = (beta*h*ff[i])/(np.exp(beta*h*ff[i])-1)
     W_Eqho.append(b1+b2)
     ysm2.append(W_Eqho[i]*ys[i])
-E_cho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ys[1:],ff[1:]))*(beta**(-1)) # energy (assuming classical harmonic oscillator)
-E_qho = (integrate.simps(ygm[1:],ff[1:]) + integrate.simps(ysm2[1:],ff[1:]))*(beta**(-1)) # energy (assuming quantum harmonic oscillator)
-print(E_cho)
-print(E_qho)
+E_cho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ys[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*(beta**(-1)) # Energy (assuming classical harmonic oscillator)
+E_qho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) + integrate.simps(ysm2[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]))*(beta**(-1)) # Energy (assuming quantum harmonic oscillator)
 
+#--------------------------------------------------------------------------------------------------------------------
+
+# Printing results in a file
+
+"""
+# For N = 10 system
+out = open("output10.txt", "r+")
+out.truncate(0)
+print("Data collected for N=10 system \n ", file = out)
+print("Total Density of states = ", tdos, file = out)
+print("Self diffusion coefficient at density = ", dif_sp, file = out)
+print("Normalized diffusivity coefficient / delta = ", delta, file = out)
+print("Packing fraction = ", pf_assval, file = out)
+print("Hard sphere diameter = ", dia, file = out)
+print("Fluidicity / Fraction of gas = ", frac, file = out)
+print("Diffusivity of the gas component assuming gas as a hard sphere at f.density = ", dif_hsfp, file = out)
+print("Hard sphere Chapman Enskog diffusion at density = ", dif_cep, file = out)
+print("Hard sphere Chapman Enskog diffusion at f.density = ", dif_cefp, file = out)
+print("Total number of gas DOS = ", tdosg, file = out)
+print("Total number of solid DOS = ", tdoss, file = out)
+print("Solid DOS partition function assuming classical harmonic oscillator = ", chos, file = out)
+print("Solid DOS partition function assuming quantum harmonic oscillator = ", qhos, file = out)
+print("Excess Entropy contribution per molecule assuming monatomic ideal gas at given temperature and density (united atom model), per molecule basis = ", si, file = out)
+print("Carnahan Starling equation calculated hard sphere excess entropy, per molecule basis = ", sh, file = out)
+print("Helmholtz free energy (assuming classical harmonic oscillator) = ", A_cho, file = out)
+print("Helmholtz free energy (assuming quantum harmonic oscillator) = ", A_qho, file = out)
+print("Entropy (assuming classical harmonic oscillator) = ", S_cho, file = out)
+print("Entropy (assuming quantum harmonic oscillator) = ", S_qho, file = out)
+print("Energy (assuming classical harmonic oscillator) = ", E_cho, file = out)
+print("Energy (assuming quantum harmonic oscillator) = ", E_qho, file = out)
+out.close()
+"""
+
+"""
+# For N = 30 system
+out = open("output30.txt", "r+")
+out.truncate(0)
+print("Data collected for N=30 system \n ", file = out)
+print("Total Density of states = ", tdos, file = out)
+print("Self diffusion coefficient = ", dif_sp, file = out)
+print("Normalized diffusivity coefficient / delta = ", delta, file = out)
+print("Packing fraction = ", pf_assval, file = out)
+print("Hard sphere diameter = ", dia, file = out)
+print("Fluidicity / Fraction of gas = ", frac, file = out)
+print("Diffusivity of the gas component assuming gas as a hard sphere at f.density = ", dif_hsfp, file = out)
+print("Hard sphere Chapman Enskog diffusion at density = ", dif_cep, file = out)
+print("hard sphere Chapman Enskog diffusion at f.density = ", dif_cefp, file = out)
+print("Total number of gas DOS = ", tdosg, file = out)
+print("Total number of solid DOS = ", tdoss, file = out)
+print("Solid DOS partition function assuming classical harmonic oscillator = ", chos, file = out)
+print("Solid DOS partition function assuming quantum harmonic oscillator = ", qhos, file = out)
+print("Excess Entropy contribution per molecule assuming monatomic ideal gas at given temperature and density (united atom model), per molecule basis = ", si, file = out)
+print("Carnahan Starling equation calculated hard sphere excess entropy, per molecule basis = ", sh, file = out)
+print("Helmholtz free energy (assuming classical harmonic oscillator) = ", A_cho, file = out)
+print("Helmholtz free energy (assuming quantum harmonic oscillator) = ", A_qho, file = out)
+print("Entropy (assuming classical harmonic oscillator) = ", S_cho, file = out)
+print("Entropy (assuming quantum harmonic oscillator) = ", S_qho, file = out)
+print("Energy (assuming classical harmonic oscillator) = ", E_cho, file = out)
+print("Energy (assuming quantum harmonic oscillator) = ", E_qho, file = out)
+out.close()
+"""
 #--------------------------------------------------------------------------------------------------------------------
