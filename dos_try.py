@@ -6,7 +6,7 @@ Can solve for one system by hashing out the other system (eg solving for system1
 Initially both are hashed out
 """
 
-import numpy as np 
+import numpy as np
 from scipy import integrate
 import scipy.constants
 import cmath
@@ -19,7 +19,7 @@ from sympy.plotting import plot as symplot
 
 # all parameters and constants
 
-t = [] # list to store time 
+t = [] # list to store time
 out_list = [] # list to store auto-correlation values
 kb = scipy.constants.k # Boltzmann Constant k
 Na = scipy.constants.Avogadro # Avogadro's number
@@ -32,7 +32,7 @@ y = [] # store DOS overall
 ys = [] # store DOS solid contribution
 yg = [] # store DOS gas contribution
 m = 16.04*(1e-3)/Na # mass of one methane molecule
-# N = 10 # number of particles in system1
+N = 10 # number of particles in system1
 # N = 30 # number of particles in system2
 vol = 4.00440*3.97980*4.01490*(1e-27) # volume of the system
 den = N/vol # particle number density of the system
@@ -60,7 +60,7 @@ ygm.append(0)
 # reading files
 # use either of the two based on the system of interest
 
-# data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17) # system1
+data = np.loadtxt('vac-CH4-308K-10-RUN1-prod1.xvg',skiprows = 17) # system1
 # data = np.loadtxt('vac-CH4-308K-30-RUN1-prod1.xvg',skiprows = 17) # system2
 
 #--------------------------------------------------------------------------------------------------------------------
@@ -68,46 +68,41 @@ ygm.append(0)
 # storing time and correlation values to corresponding lists
 
 length = len(data) # calculating length of the data lists
-for i in range(0,length):
-    out_list.append(data[i][1]*m*N*(1e6)) # storing mass weighted auto correlation values
-    t.append(data[i][0]) # storing time
+MVACF = data[:,1] * m * N * (1e6)  # storing mass weighted auto correlation values
+t = data[:,0]
+dt = (t[1]-t[0])*(1e-12)
 #--------------------------------------------------------------------------------------------------------------------
-
 # Normalizing data such that C(0) = 3*N*kb*T
 
-for i in range(length):
-    out_list[i] = (out_list[i]/out_list[0])*3*N*kb*T
-#-------------------------------------------------------------------------------------------------------------------- 
-"""
+# MVACF = MVACF/MVACF[0] * 3 * N * kb * T
+MVACF = np.hstack((MVACF, MVACF[::-1]))
+length *= 2
+#--------------------------------------------------------------------------------------------------------------------
 # performing discrete fourier cosine transform on auto correlation values (1)(takes a lot of time to run and is similar to dct in python)
 
-for i in range(length):
-    for j in range(length):
-        angle = 2*np.pi*float(i*j/length)
-        clc = clc + out_list[j]*np.cos(angle)
-    y.append(clc)
-    clc = 0
-#print(y)
+# angles = 2*np.pi*np.arange(length, dtype=np.float_)/length
+# VDOS = np.empty(length, dtype=np.float_)
+# for i in range(length):
+#     VDOS[i] = np.sum(MACF * np.cos(i*angles))
 #--------------------------------------------------------------------------------------------------------------------
-"""
 
 
 # performing discrete fourier transform on auto correlation values using inbult python functions(2)
 
-y = fft(out_list)
+VDOS = fft(MVACF)
 # y = dct(out_list,2) # gives twice the expected results, don't know why
 
 #--------------------------------------------------------------------------------------------------------------------
 
-# calculating total degrees of freedom and self diffusion coefficient of the system 
+# calculating total degrees of freedom and self diffusion coefficient of the system
 
-for i in range(len(y)):
-    y[i] = (y[i].real*4)*(5e-15)*(beta) # multiplying by the factor (4/kT)*dt
-    ff.append(i/((5e-15)*len(y))) # v (frequency)
-tdos = integrate.simps(y[:(int)((len(y)-1)/2)],ff[:(int)((len(y)-1)/2)]) # total number of degrees of freedom
-dif_sp = y[0]*(T*kb)/(12*m*N) # Self diffusion coefficient (p)
+VDOS = np.real(VDOS)*2*beta  # multiplying by the factor (2/kT)*dt
+ff = np.arange(length, dtype=np.float_)/length  # v (frequency)
+tdos = integrate.simps(VDOS[:(int)((length-1)/2)],ff[:(int)((length-1)/2)]) # total number of degrees of freedom
+dif_sp = VDOS[0]*(T*kb)/(12*m*N) # Self diffusion coefficient (p)
 #plt.plot(ff,y) # plotting S(v) vs v
 #plt.show()
+y = VDOS
 
 #--------------------------------------------------------------------------------------------------------------------
 
@@ -174,7 +169,7 @@ qhos = np.exp(lqhos) # finding corresponding partition function
 
 # finding entropy contribution for hard sphere fluid
 
-# Step 1 : find excess entropy contribution per molecule assuming monatomic ideal gas at same temperature and density (united atom model), per molecule basis 
+# Step 1 : find excess entropy contribution per molecule assuming monatomic ideal gas at same temperature and density (united atom model), per molecule basis
 
 r = (((2*np.pi*m*kb*T)/(h**2))**(1.5))*(np.exp(2.5))/den
 si = kb*np.log(r) # entropy value per molecule basis
@@ -203,9 +198,9 @@ A_qho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) +
 
 # reinitializing different parameters
 
-ysm1 = [] 
+ysm1 = []
 ysm1.append(0)
-ysm2 = [] 
+ysm2 = []
 ysm2.append(0)
 ygm = []
 ygm.append(0)
@@ -226,9 +221,9 @@ S_qho = (integrate.simps(ygm[1:(int)((len(y)-1)/2)],ff[1:(int)((len(y)-1)/2)]) +
 
 # reinitializing different parameters
 
-ysm1 = [] 
+ysm1 = []
 ysm1.append(0)
-ysm2 = [] 
+ysm2 = []
 ysm2.append(0)
 ygm = []
 ygm.append(0)
