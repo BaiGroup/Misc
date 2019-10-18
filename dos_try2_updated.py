@@ -1,5 +1,5 @@
-# Below is the code for computing thermodynamic parameters of a 2PT system
 
+# Below is the code for computing thermodynamic parameters of a 2PT system
 
 import glob
 import numpy as np 
