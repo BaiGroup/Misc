@@ -1,9 +1,6 @@
 """
 Below is the code for computing thermodynamic parameters of a 2PT system
-Considered 2 systems - system1 with 10 molecules and system2 with 30 molecules
-Both systems at same temperature ie 308K and vol
-Can solve for one system by hashing out the other system ( eg solving for system1, hash out every syntax related to system2)
-Initially both are hashed out
+
 """
 
 import glob
@@ -17,14 +14,16 @@ from scipy.fftpack import fft
 from scipy import optimize
 
 c = 0 # counter variable
-numstr = []
-numrun = []
+numstr = [] # string list to store number of components in the systems tested
+numrun = [] # string list to store run number for the system being tested
 
-# reading files
-# using glob to open files
+# using glob to open files and storing their names
 
 filenames = glob.glob('vac-CH4-308K-*-RUN*-prod1.xvg')
-numfiles = len(filenames)
+numfiles = len(filenames) # number of files
+
+# snippet to store number of particles and run number in the corresponding lists
+
 for i in range(numfiles):
     dummy = filenames[i]
     lendummy = len(dummy)
@@ -40,6 +39,10 @@ for i in range(numfiles):
             continue
     numstr.append(dummy[u1:u2])
     numrun.append(dummy[u3:u4])
+
+#--------------------------------------------------------------------------------------------------------------------
+
+# reading file and performing operations
 
 for files in filenames:
     data = np.loadtxt(fname = files,skiprows = 17)
