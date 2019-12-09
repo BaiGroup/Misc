@@ -1,4 +1,3 @@
-
 # Below is the code for computing thermodynamic parameters of a 2PT system
 
 import sys
